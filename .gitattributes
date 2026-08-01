@@ -1,0 +1,9 @@
+# Shell scripts must keep LF endings. Checked out with CRLF on Windows they fail on
+# macOS and Linux with "bad interpreter: /usr/bin/env bash^M" — which is exactly what
+# would happen to the hook, on the other developer's machine, silently.
+*.sh text eol=lf
+
+# Normalise the rest so the two of us don't trade whole-file diffs over line endings.
+* text=auto
+*.png binary
+*.ico binary
