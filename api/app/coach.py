@@ -18,10 +18,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import user_settings
+from . import security, user_settings
 from .analytics import build_snapshot, project, series, summarize
 from .db import get_db
-from .auth import current_user
 from .models import DailySnapshot, ProviderConnection, User, utcnow
 
 log = logging.getLogger("nexuscoach.coach")
@@ -132,7 +131,8 @@ def messages_for(context: dict, question: str, history: list[dict] | None = None
 def ask(
     body: Ask,
     db: Session = Depends(get_db),
-    user: User = Depends(current_user),
+    # Every call spends the user's own tokens — cap the blast radius of a runaway client.
+    user: User = Depends(security.by_user("coach_ask", 40, 3600)),
 ):
     key, model = credentials(db, user.id)
     context = build_context(db, user)
@@ -144,7 +144,7 @@ def ask(
 @router.post("/insight")
 def insight(
     db: Session = Depends(get_db),
-    user: User = Depends(current_user),
+    user: User = Depends(security.by_user("coach_insight", 20, 3600)),
     refresh: bool = False,
 ):
     """Today's briefing. Cached on the daily snapshot so the nightly job can warm it."""

@@ -14,6 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from .crypto import decrypt, encrypt
 from .db import Base
 
 
@@ -55,6 +56,28 @@ class Metric(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class JobRun(Base):
+    """One row per scheduled run.
+
+    The unique `(name, day)` is also the lock: whoever inserts it first owns tonight's
+    run, so a second process (or a restart) can't run the job twice.
+    """
+
+    __tablename__ = "job_runs"
+    __table_args__ = (UniqueConstraint("name", "day", name="uq_job_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(32))
+    day: Mapped[date] = mapped_column(Date)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Annotated non-optional with nullable=True on purpose: SQLAlchemy 2.0.36 on
+    # Python 3.14 crashes resolving `Mapped[datetime | None]`. Null until the run ends.
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    ok: Mapped[int] = mapped_column(Integer, default=0)
+    failed: Mapped[int] = mapped_column(Integer, default=0)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 class UserSetting(Base):
     """A per-user configuration value — the user's own API keys, mostly.
 
@@ -77,9 +100,8 @@ class UserSetting(Base):
 class ProviderConnection(Base):
     """OAuth tokens for one user at one provider (withings, garmin, ...).
 
-    ponytail: tokens are stored as-is. The DB is single-tenant on the app's own VM and
-    never exposed, so column encryption buys little until the DB moves or is shared —
-    at that point wrap access_token/refresh_token in Fernet keyed from the env.
+    `access_token` / `refresh_token` hold Fernet ciphertext — read and write them through
+    the `access` / `refresh` properties, never directly.
     """
 
     __tablename__ = "provider_connections"
@@ -95,6 +117,22 @@ class ProviderConnection(Base):
     # Provider-side high-water mark, so a sync only asks for what changed. 0 = never synced.
     last_update: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    @property
+    def access(self) -> str:
+        return decrypt(self.access_token) or ""
+
+    @access.setter
+    def access(self, value: str) -> None:
+        self.access_token = encrypt(value)
+
+    @property
+    def refresh(self) -> str:
+        return decrypt(self.refresh_token) or ""
+
+    @refresh.setter
+    def refresh(self, value: str) -> None:
+        self.refresh_token = encrypt(value)
 
 
 class DailySnapshot(Base):

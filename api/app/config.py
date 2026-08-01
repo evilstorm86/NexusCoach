@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Comma-separated origins allowed to call the API from a browser.
     cors_origins: str = "http://localhost:3000"
 
+    # Nightly sync. Hour is UTC; disable in a second replica so it runs once.
+    run_scheduler: bool = True
+    nightly_hour: int = 3
+
     withings_client_id: str = ""
     withings_client_secret: str = ""
     withings_redirect_uri: str = "http://localhost:8000/integrations/withings/callback"

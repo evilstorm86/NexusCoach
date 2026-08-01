@@ -23,12 +23,12 @@ docker compose up --build
 ```
 
 API on `:8000`, web on `:3000` (internal — exposed only via the tunnel).
-Health check: `docker compose exec api curl -s localhost:8000/health`.
+Health check: `docker compose exec api python -c "import urllib.request;print(urllib.request.urlopen('http://localhost:8000/health').read())"` (the image has no curl).
 
 ## PWA
 
 Pages: Dashboard, Body, Nutrition, Training, Recovery, AI Coach, Integrations, Profile.
-Installable (manifest + service worker), bottom nav on phones, light/dark from the OS.
+Installable (manifest + service worker), bottom nav on phones.
 
 Body / Nutrition / Training / Recovery are one component with different metric lists —
 same job, so one page. Charts are inline SVG: daily readings as muted dots, the smoothed
@@ -185,6 +185,38 @@ its callback to `WITHINGS_REDIRECT_URI`, and fill the three `WITHINGS_*` vars in
 refreshed automatically when within a minute of expiry. Body-composition measures land in
 `metrics` with `source="withings"`; re-syncing never duplicates them.
 
+## Scheduler
+
+Runs at `NIGHTLY_HOUR`:00 UTC (default 03:00). Per user, in order: refresh provider
+tokens and pull new measures → rebuild today's snapshot → refresh the AI insight. One
+user's failure is recorded and the batch continues.
+
+| Endpoint | Notes |
+|---|---|
+| `POST /admin/jobs/nightly` | run it now (admin) |
+| `GET /admin/jobs` | last 30 runs with per-user errors |
+
+It's an asyncio task in the API process, not Celery — one job, once a night, on a 2 vCPU
+box. `job_runs` has `UNIQUE(name, day)`, and that insert *is* the lock: a second process
+or a restart finds the row and skips. Set `RUN_SCHEDULER=false` on any extra replica.
+
+Users without an OpenRouter key still get snapshots but no insight — no key, no spend.
+
+## Production notes
+
+- **Rate limits**: login 15/5 min and register 10/h per IP; `/coach/ask` 40/h and
+  `/coach/insight` 20/h per *user*, since those spend the user's tokens. In-process
+  counters (`api/app/security.py`) — the ceiling is documented there: two replicas need a
+  shared store.
+- **Headers**: `nosniff`, `DENY` framing, `no-referrer`, COOP, HSTS. No CSP — this serves
+  JSON; the PWA's CSP belongs with whatever serves it.
+- **Uploads** capped at 100 MB on `Content-Length`. A chunked request without one still
+  reaches the handler, so keep a limit at the tunnel too.
+- **Secrets at rest**: user settings *and* provider OAuth tokens are Fernet-encrypted.
+  The migration that adds `job_runs` also encrypts any tokens already stored in the clear.
+- **Containers** run as non-root with per-service memory limits sized for a 2 GB VM
+  (db/api/web 512M, tunnel 64M). One uvicorn worker on purpose — see `api/Dockerfile`.
+
 ### Migrations
 
 ```bash
@@ -210,5 +242,5 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 6. ✅ Analytics
 7. ✅ PWA
 8. ✅ AI Coach
-9. Scheduler (nightly 03:00)
-10. Production hardening
+9. ✅ Scheduler (nightly 03:00)
+10. ✅ Production hardening

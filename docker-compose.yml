@@ -1,3 +1,5 @@
+# Memory limits are sized for the 2 GB target VM: Postgres 512M, api 512M, web 512M,
+# tunnel 64M, leaving room for the OS. Without them one runaway container takes the box.
 services:
   db:
     image: postgres:16-alpine
@@ -12,6 +14,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     restart: unless-stopped
 
   api:
@@ -22,6 +28,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     restart: unless-stopped
 
   web:
@@ -34,6 +52,10 @@ services:
       - "127.0.0.1:3000:3000"
     depends_on:
       - api
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     restart: unless-stopped
 
   tunnel:
@@ -41,6 +63,10 @@ services:
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - web
+    deploy:
+      resources:
+        limits:
+          memory: 64M
     restart: unless-stopped
 
 volumes:

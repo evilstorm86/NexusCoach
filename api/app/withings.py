@@ -81,8 +81,8 @@ def _store_tokens(db: Session, user_id: int, body: dict) -> ProviderConnection:
         conn = ProviderConnection(user_id=user_id, provider=PROVIDER)
         db.add(conn)
     conn.provider_user_id = str(body.get("userid", ""))
-    conn.access_token = body["access_token"]
-    conn.refresh_token = body["refresh_token"]
+    conn.access = body["access_token"]
+    conn.refresh = body["refresh_token"]
     conn.expires_at = expires_at
     db.commit()
     db.refresh(conn)
@@ -95,7 +95,7 @@ def fresh_token(db: Session, conn: ProviderConnection) -> str:
     if expires_at.tzinfo is None:  # sqlite hands back naive datetimes
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     if expires_at > utcnow() + timedelta(seconds=60):
-        return conn.access_token
+        return conn.access
 
     client_id, client_secret = credentials(db, conn.user_id)
     body = call(
@@ -105,11 +105,11 @@ def fresh_token(db: Session, conn: ProviderConnection) -> str:
             "grant_type": "refresh_token",
             "client_id": client_id,
             "client_secret": client_secret,
-            "refresh_token": conn.refresh_token,
+            "refresh_token": conn.refresh,
         },
     )
     log.info("refreshed token user_id=%s", conn.user_id)
-    return _store_tokens(db, conn.user_id, body).access_token
+    return _store_tokens(db, conn.user_id, body).access
 
 
 def to_points(measuregrps: list[dict]) -> list[MetricIn]:

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import security as rate_limit
 from .config import settings
 from .db import get_db
 from .models import ROLES, User, utcnow
@@ -80,7 +81,12 @@ def require_role(*roles: str):
     return guard
 
 
-@router.post("/register", response_model=UserOut, status_code=201)
+@router.post(
+    "/register",
+    response_model=UserOut,
+    status_code=201,
+    dependencies=[Depends(rate_limit.by_ip("register", 10, 3600))],
+)
 def register(body: RegisterIn, db: Session = Depends(get_db)):
     email = body.email.lower()
     if db.scalar(select(User).where(User.email == email)):
@@ -93,7 +99,7 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit.by_ip("login", 15, 300))])
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == form.username.lower()))
     if user is None or not verify_password(form.password, user.password_hash):
