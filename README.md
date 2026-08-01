@@ -25,6 +25,38 @@ docker compose up --build
 API on `:8000`, web on `:3000` (internal — exposed only via the tunnel).
 Health check: `docker compose exec api python -c "import urllib.request;print(urllib.request.urlopen('http://localhost:8000/health').read())"` (the image has no curl).
 
+**Deploying for real: [docs/DEPLOY.md](docs/DEPLOY.md)** — VM setup, secrets, the first
+admin, backups, upgrades and troubleshooting.
+
+## Status
+
+Milestones 1–10 are implemented and the API suite passes (73 tests). What that does
+**not** cover, so nobody is surprised:
+
+- **It has never run under Docker or on the VM.** Tests, screenshots and manual checks all
+  used SQLite plus a local uvicorn. The Postgres path, the container builds and the tunnel
+  are written but unexercised.
+- **Withings is unverified against the live API.** The flow is stubbed at the HTTP
+  boundary; the endpoint shapes come from the documented v2 API, not from a real call.
+- **No password reset.** Lose the password, lose the account.
+- **No automated backups.** [docs/DEPLOY.md](docs/DEPLOY.md) §6 has the cron to add.
+- **No CI.** Tests run when someone runs them.
+- **The `coach` role does nothing** — there is no coach↔client link yet.
+
+## Admin
+
+Registration always creates a plain `user`; nothing else ever writes the role. Promote
+someone before the `/admin` endpoints are reachable:
+
+```bash
+docker compose exec api python -m app.promote --list
+docker compose exec api python -m app.promote you@example.com admin
+docker compose exec api python -m app.promote you@example.com user    # demote
+```
+
+A command rather than an `ADMIN_EMAILS` env var on purpose: a startup list would silently
+re-promote anyone deliberately demoted on the next restart.
+
 ## PWA
 
 Pages: Dashboard, Body, Nutrition, Training, Recovery, AI Coach, Integrations, Profile.
@@ -194,7 +226,7 @@ user's failure is recorded and the batch continues.
 
 | Endpoint | Notes |
 |---|---|
-| `POST /admin/jobs/nightly` | run it now (admin) |
+| `POST /admin/jobs/nightly` | run it now (admin — see [Admin](#admin)) |
 | `GET /admin/jobs` | last 30 runs with per-user errors |
 
 It's an asyncio task in the API process, not Celery — one job, once a night, on a 2 vCPU
