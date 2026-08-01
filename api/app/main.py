@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 
 from . import db
 from .auth import require_role, router as auth_router
+from .analytics import router as analytics_router
 from .imports import router as imports_router
 from .metrics import router as metrics_router
 from .models import User
@@ -15,6 +16,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 app = FastAPI(title="NexusCoach API")
 app.include_router(auth_router)
 app.include_router(metrics_router)
+app.include_router(analytics_router)
 app.include_router(imports_router)
 app.include_router(withings_router)
 

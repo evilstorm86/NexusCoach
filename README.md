@@ -54,6 +54,29 @@ origin). `UNIQUE(user_id, source, metric, ts)` makes re-syncing a provider idemp
 | `POST /metrics` | list of points; re-sending a point updates it |
 | `GET /metrics` | `?metric=&since=&until=&limit=`, always scoped to the caller |
 
+## Analytics
+
+| Endpoint | Returns |
+|---|---|
+| `GET /analytics/summary` | headline metrics: latest value, smoothed value, trend |
+| `GET /analytics/series?metric=&days=` | raw daily points + EMA + trend |
+| `GET /analytics/predict?metric=&goal=&days_ahead=` | projection, with its assumption stated |
+| `POST /analytics/snapshot` | recompute one day's rollup (idempotent) |
+| `GET /analytics/snapshots?days=` | recent daily snapshots |
+
+Responses are split into `facts` (measured), `analysis` (smoothed / rate of change) and
+`prediction` (extrapolated) — the separation the AI coach must preserve, enforced by the
+data shape rather than by prompt wording.
+
+Multiple readings in a day collapse to one: summed for counters (steps, kcal, macros),
+averaged for levels (weight, heart rate). Trends are a least-squares fit over the last 28
+days and return `null` rather than a slope drawn through two points.
+
+**No pandas / scikit-learn / XGBoost.** One person's data is a few hundred points per
+metric per year; `statistics.linear_regression` and a time-weighted EMA cover it, and the
+ML stack would cost ~500 MB of image on a 2 GB VM. The ceiling is documented in
+`api/app/analytics.py` — seasonality or multi-metric models are where numpy earns its keep.
+
 ## Imports
 
 | Endpoint | Accepts |
@@ -108,7 +131,7 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 3. ✅ Database & domain model (alembic)
 4. ✅ Withings OAuth2 sync *(untested against the live API — needs credentials)*
 5. ✅ Imports (Apple Health, Health Connect, CSV)
-6. Analytics
+6. ✅ Analytics
 7. PWA
 8. AI Coach
 9. Scheduler (nightly 03:00)
