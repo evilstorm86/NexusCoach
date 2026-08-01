@@ -54,6 +54,22 @@ origin). `UNIQUE(user_id, source, metric, ts)` makes re-syncing a provider idemp
 | `POST /metrics` | list of points; re-sending a point updates it |
 | `GET /metrics` | `?metric=&since=&until=&limit=`, always scoped to the caller |
 
+## Imports
+
+| Endpoint | Accepts |
+|---|---|
+| `POST /imports/csv` | `ts,metric,value,unit` (+ optional `source`), UTF-8 |
+| `POST /imports/apple-health` | `export.xml` or the `export.zip` the Health app produces |
+
+Apple body-composition records are kept at full resolution; high-frequency ones (steps,
+heart rate, energy, macros) are rolled up to one value per day during the parse — a year
+of raw samples would be hundreds of thousands of rows and the analytics only read the
+daily figure. Percentages are normalized (Apple's `0.221` → `22.1`). Sleep stages are
+categories, not scalars, and are skipped.
+
+**Health Connect** has no export file: the Android client reads the SDK and POSTs the same
+point shape to `/metrics`. No separate endpoint.
+
 ## Withings
 
 Create an app at [developer.withings.com](https://developer.withings.com/dashboard/), set
@@ -91,7 +107,7 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 2. ✅ Authentication (JWT, roles user/coach/admin)
 3. ✅ Database & domain model (alembic)
 4. ✅ Withings OAuth2 sync *(untested against the live API — needs credentials)*
-5. Imports (Apple Health, Health Connect, CSV)
+5. ✅ Imports (Apple Health, Health Connect, CSV)
 6. Analytics
 7. PWA
 8. AI Coach
