@@ -55,6 +55,25 @@ class Metric(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class UserSetting(Base):
+    """A per-user configuration value — the user's own API keys, mostly.
+
+    Secret values are stored encrypted (see crypto.py) and are never returned by the
+    API; the settings page shows a masked hint instead.
+    """
+
+    __tablename__ = "user_settings"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    name: Mapped[str] = mapped_column(String(48), primary_key=True)
+    value: Mapped[str] = mapped_column(String(2048))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class ProviderConnection(Base):
     """OAuth tokens for one user at one provider (withings, garmin, ...).
 

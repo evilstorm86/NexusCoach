@@ -40,6 +40,32 @@ checked with the validator (CVD ΔE 15.9, normal-vision 17.8).
 runtime env var, and it must be the URL the *browser* uses. `CORS_ORIGINS` on the API must
 list the web origin.
 
+## Settings (per-user API keys)
+
+Users bring their own keys on **Profile → Settings** instead of everything living in
+`.env`. Resolution is always **user setting → server default**, so a single-tenant
+install still works with nothing configured in the UI.
+
+| Endpoint | Notes |
+|---|---|
+| `GET /settings` | never returns a secret — `configured`, `source`, and a `…1234` hint |
+| `PUT /settings/{name}` | store a value for the caller |
+| `DELETE /settings/{name}` | drop it and fall back to the server value |
+
+Settable: `openrouter_api_key`, `openrouter_model`, `withings_client_id`,
+`withings_client_secret`. Anything else is a 404 — the list is a whitelist, not free-form
+key/value storage.
+
+Secrets are encrypted at rest with Fernet (`api/app/crypto.py`). `SECRETS_KEY` holds the
+key; left blank it is derived from `JWT_SECRET`, which is fine for dev but means rotating
+`JWT_SECRET` in production would orphan every stored secret — set it explicitly.
+
+**Withings is the exception worth knowing:** `client_id` / `client_secret` are issued per
+registered *application*, not per person, so most installs leave them blank and use the
+deployment's own app. The per-user override exists for people who register their own at
+developer.withings.com. `WITHINGS_REDIRECT_URI` stays server-side either way — it has to
+point at this deployment.
+
 ## Auth
 
 | Endpoint | Notes |

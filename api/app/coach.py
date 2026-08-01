@@ -18,8 +18,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import user_settings
 from .analytics import build_snapshot, project, series, summarize
-from .config import settings
 from .db import get_db
 from .auth import current_user
 from .models import DailySnapshot, ProviderConnection, User, utcnow
@@ -62,20 +62,23 @@ class Ask(BaseModel):
     history: list[dict] = Field(default_factory=list, max_length=20)
 
 
-def _require_key():
-    if not settings.openrouter_api_key:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "AI coach is not configured")
+def credentials(db: Session, user_id: int) -> tuple[str, str]:
+    """The user's own OpenRouter key and model, falling back to the server's."""
+    key = user_settings.get(db, user_id, "openrouter_api_key")
+    if not key:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "No OpenRouter API key. Add one under Profile → Settings.",
+        )
+    return key, user_settings.get(db, user_id, "openrouter_model")
 
 
-def chat(messages: list[dict]) -> str:
+def chat(messages: list[dict], api_key: str, model: str) -> str:
     """One OpenRouter completion. The only place this app talks to an LLM."""
     r = httpx.post(
         API_URL,
-        headers={
-            "Authorization": f"Bearer {settings.openrouter_api_key}",
-            "X-Title": "NexusCoach",
-        },
-        json={"model": settings.openrouter_model, "messages": messages},
+        headers={"Authorization": f"Bearer {api_key}", "X-Title": "NexusCoach"},
+        json={"model": model, "messages": messages},
         timeout=90,
     )
     if r.status_code != 200:
@@ -131,11 +134,11 @@ def ask(
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    _require_key()
+    key, model = credentials(db, user.id)
     context = build_context(db, user)
-    answer = chat(messages_for(context, body.question, body.history))
+    answer = chat(messages_for(context, body.question, body.history), key, model)
     log.info("coach ask user_id=%s chars=%s", user.id, len(answer))
-    return {"answer": answer, "grounded_in": sorted(context["facts"]), "model": settings.openrouter_model}
+    return {"answer": answer, "grounded_in": sorted(context["facts"]), "model": model}
 
 
 @router.post("/insight")
@@ -145,7 +148,7 @@ def insight(
     refresh: bool = False,
 ):
     """Today's briefing. Cached on the daily snapshot so the nightly job can warm it."""
-    _require_key()
+    key, model = credentials(db, user.id)
     snapshot = build_snapshot(db, user.id)
     cached = snapshot.data.get("insight")
     if cached and not refresh:
@@ -155,7 +158,7 @@ def insight(
     if not context["has_data"]:
         raise HTTPException(status.HTTP_409_CONFLICT, "No data yet — connect a device or upload a file")
 
-    text = chat(messages_for(context, INSIGHT_PROMPT))
+    text = chat(messages_for(context, INSIGHT_PROMPT), key, model)
     # `data` is a plain JSON column, so replace it rather than mutating in place.
     snapshot.data = {**snapshot.data, "insight": text}
     db.commit()

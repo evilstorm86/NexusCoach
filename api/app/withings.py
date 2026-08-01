@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status as http
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import user_settings
 from .auth import ALGORITHM, current_user
 from .config import settings
 from .db import get_db
@@ -57,9 +58,16 @@ def call(path: str, data: dict, token: str | None = None) -> dict:
     return payload.get("body", {})
 
 
-def _require_credentials():
-    if not settings.withings_client_id or not settings.withings_client_secret:
-        raise HTTPException(http.HTTP_503_SERVICE_UNAVAILABLE, "Withings is not configured")
+def credentials(db: Session, user_id: int) -> tuple[str, str]:
+    """This user's Withings app credentials, falling back to the deployment's own."""
+    client_id = user_settings.get(db, user_id, "withings_client_id")
+    client_secret = user_settings.get(db, user_id, "withings_client_secret")
+    if not client_id or not client_secret:
+        raise HTTPException(
+            http.HTTP_503_SERVICE_UNAVAILABLE,
+            "Withings is not configured. Add client credentials under Profile → Settings.",
+        )
+    return client_id, client_secret
 
 
 def _store_tokens(db: Session, user_id: int, body: dict) -> ProviderConnection:
@@ -89,13 +97,14 @@ def fresh_token(db: Session, conn: ProviderConnection) -> str:
     if expires_at > utcnow() + timedelta(seconds=60):
         return conn.access_token
 
+    client_id, client_secret = credentials(db, conn.user_id)
     body = call(
         "/v2/oauth2",
         {
             "action": "requesttoken",
             "grant_type": "refresh_token",
-            "client_id": settings.withings_client_id,
-            "client_secret": settings.withings_client_secret,
+            "client_id": client_id,
+            "client_secret": client_secret,
             "refresh_token": conn.refresh_token,
         },
     )
@@ -147,9 +156,9 @@ def sync_connection(db: Session, conn: ProviderConnection) -> dict:
 
 
 @router.get("/connect")
-def connect(user: User = Depends(current_user)):
+def connect(db: Session = Depends(get_db), user: User = Depends(current_user)):
     """URL to send the user to. `state` is a short-lived JWT, so no server-side store."""
-    _require_credentials()
+    client_id, _ = credentials(db, user.id)
     state = jwt.encode(
         {"sub": str(user.id), "exp": utcnow() + timedelta(minutes=10)},
         settings.jwt_secret,
@@ -158,7 +167,7 @@ def connect(user: User = Depends(current_user)):
     query = urlencode(
         {
             "response_type": "code",
-            "client_id": settings.withings_client_id,
+            "client_id": client_id,
             "scope": SCOPE,
             "redirect_uri": settings.withings_redirect_uri,
             "state": state,
@@ -169,19 +178,19 @@ def connect(user: User = Depends(current_user)):
 
 @router.get("/callback")
 def callback(code: str, state: str, db: Session = Depends(get_db)):
-    _require_credentials()
     try:
         user_id = int(jwt.decode(state, settings.jwt_secret, algorithms=[ALGORITHM])["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         raise HTTPException(http.HTTP_400_BAD_REQUEST, "Invalid or expired state")
 
+    client_id, client_secret = credentials(db, user_id)
     body = call(
         "/v2/oauth2",
         {
             "action": "requesttoken",
             "grant_type": "authorization_code",
-            "client_id": settings.withings_client_id,
-            "client_secret": settings.withings_client_secret,
+            "client_id": client_id,
+            "client_secret": client_secret,
             "code": code,
             "redirect_uri": settings.withings_redirect_uri,
         },

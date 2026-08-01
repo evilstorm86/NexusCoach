@@ -6,6 +6,9 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://nexus:nexus@db:5432/nexuscoach"
     jwt_secret: str = "dev-only-change-me"
+    # Fernet key (base64, 32 bytes) for secrets users store via the settings page.
+    # Left blank it is derived from JWT_SECRET — fine for dev, set it in production.
+    secrets_key: str = ""
     openrouter_api_key: str = ""
     # OpenRouter model slug. Opus 5 is the most capable; swap for a cheaper slug if the
     # coaching bill matters more than answer quality.

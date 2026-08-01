@@ -11,6 +11,7 @@ from .coach import router as coach_router
 from .imports import router as imports_router
 from .metrics import router as metrics_router
 from .models import User
+from .user_settings import router as settings_router
 from .withings import router as withings_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -32,6 +33,7 @@ app.include_router(metrics_router)
 app.include_router(analytics_router)
 app.include_router(coach_router)
 app.include_router(imports_router)
+app.include_router(settings_router)
 app.include_router(withings_router)
 
 

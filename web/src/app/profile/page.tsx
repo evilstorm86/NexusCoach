@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, clearToken, type Me } from "@/lib/api";
+import SettingsForm from "@/components/SettingsForm";
 import { Button, Card } from "@/components/ui";
 
 export default function ProfilePage() {
@@ -25,6 +26,8 @@ export default function ProfilePage() {
           <dd>{me?.role ?? "…"}</dd>
         </dl>
       </Card>
+
+      <SettingsForm />
 
       <Button
         variant="danger"

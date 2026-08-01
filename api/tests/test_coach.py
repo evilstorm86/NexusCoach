@@ -19,13 +19,20 @@ def api_key():
     settings.openrouter_api_key = "test-key"
 
 
+class Captured(list):
+    """The prompts we would have sent, plus the credentials each call used."""
+
+    creds: list[dict]
+
+
 @pytest.fixture
 def sent(monkeypatch):
-    """Captures the messages we would have sent, and replies with a canned answer."""
-    captured = []
+    captured = Captured()
+    captured.creds = []
 
-    def fake_chat(messages):
+    def fake_chat(messages, api_key, model):
         captured.append(messages)
+        captured.creds.append({"api_key": api_key, "model": model})
         return "Your weight trend is down 0.7 kg/week. (ANALYSIS)"
 
     monkeypatch.setattr(coach, "chat", fake_chat)
@@ -136,3 +143,25 @@ def test_unconfigured_and_unauthenticated(client, user_token, sent):
     r = client.post("/coach/ask", json={"question": "hi"}, headers=user_token)
     assert r.status_code == 503
     assert sent == []
+
+
+def test_the_users_own_key_and_model_are_used(client, user_token, sent):
+    seed(client, user_token)
+    settings.openrouter_api_key = "server-key"
+    settings.openrouter_model = "server/model"
+
+    # No personal key yet: the deployment's own is used.
+    client.post("/coach/ask", json={"question": "hi"}, headers=user_token)
+    assert sent.creds[-1] == {"api_key": "server-key", "model": "server/model"}
+
+    client.put("/settings/openrouter_api_key", json={"value": "my-key"}, headers=user_token)
+    client.put("/settings/openrouter_model", json={"value": "my/model"}, headers=user_token)
+
+    r = client.post("/coach/ask", json={"question": "hi"}, headers=user_token)
+    assert sent.creds[-1] == {"api_key": "my-key", "model": "my/model"}
+    assert r.json()["model"] == "my/model"
+
+    # A user with their own key works even when the server has none.
+    settings.openrouter_api_key = ""
+    client.post("/coach/ask", json={"question": "hi"}, headers=user_token)
+    assert sent.creds[-1]["api_key"] == "my-key"
