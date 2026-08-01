@@ -7,6 +7,7 @@ from . import db
 from .config import settings
 from .auth import require_role, router as auth_router
 from .analytics import router as analytics_router
+from .coach import router as coach_router
 from .imports import router as imports_router
 from .metrics import router as metrics_router
 from .models import User
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(metrics_router)
 app.include_router(analytics_router)
+app.include_router(coach_router)
 app.include_router(imports_router)
 app.include_router(withings_router)
 

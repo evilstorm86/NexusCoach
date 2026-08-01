@@ -92,6 +92,25 @@ metric per year; `statistics.linear_regression` and a time-weighted EMA cover it
 ML stack would cost ~500 MB of image on a 2 GB VM. The ceiling is documented in
 `api/app/analytics.py` — seasonality or multi-metric models are where numpy earns its keep.
 
+## AI Coach
+
+| Endpoint | Notes |
+|---|---|
+| `POST /coach/ask` | `{question, history?}` — history is resent by the client, not stored |
+| `POST /coach/insight` | today's briefing, cached on the daily snapshot; `?refresh=true` to force |
+
+OpenRouter only (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, default `anthropic/claude-opus-5`).
+Returns 503 when unconfigured.
+
+The coach never touches the database. It gets a JSON context built from the same
+analytics the UI shows — already split into `facts` / `analysis` / `prediction` — and is
+instructed to keep those apart and to never state a number that isn't in it. It is told
+plainly that it is not a clinician: no diagnosis, no treatment, no dosages. With no data
+at all, `/coach/insight` returns 409 rather than asking the model to invent something.
+
+Client-supplied history is filtered to `user` and `assistant` turns, so a caller cannot
+inject a `system` message into the prompt.
+
 ## Imports
 
 | Endpoint | Accepts |
@@ -148,6 +167,6 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 5. ✅ Imports (Apple Health, Health Connect, CSV)
 6. ✅ Analytics
 7. ✅ PWA
-8. AI Coach
+8. ✅ AI Coach
 9. Scheduler (nightly 03:00)
 10. Production hardening

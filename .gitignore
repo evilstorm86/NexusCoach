@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+api/dev.db
+api/tests/test.db

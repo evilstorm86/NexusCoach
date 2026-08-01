@@ -202,9 +202,13 @@ def build_snapshot(db: Session, user_id: int, day: date | None = None) -> DailyS
         burned = data["metrics"].get("active_kcal", 0) + data["metrics"].get("basal_kcal", 0)
         data["energy_balance"] = round(data["metrics"].get("kcal_in", 0) - burned, 1)
 
-    snapshot = db.get(DailySnapshot, (user_id, day)) or DailySnapshot(user_id=user_id, day=day)
-    snapshot.data = data
-    db.merge(snapshot)
+    snapshot = db.get(DailySnapshot, (user_id, day))
+    if snapshot is None:
+        snapshot = DailySnapshot(user_id=user_id, day=day)
+        db.add(snapshot)
+    # Merge, don't replace: other writers park things here too (the coach caches its
+    # daily insight on the snapshot), and recomputing metrics must not wipe them.
+    snapshot.data = {**(snapshot.data or {}), **data}
     db.commit()
     return snapshot
 
