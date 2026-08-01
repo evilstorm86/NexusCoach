@@ -8,5 +8,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-only-change-me"
     openrouter_api_key: str = ""
 
+    withings_client_id: str = ""
+    withings_client_secret: str = ""
+    withings_redirect_uri: str = "http://localhost:8000/integrations/withings/callback"
+
 
 settings = Settings()

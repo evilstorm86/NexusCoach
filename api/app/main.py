@@ -6,6 +6,7 @@ from . import db
 from .auth import require_role, router as auth_router
 from .metrics import router as metrics_router
 from .models import User
+from .withings import router as withings_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -13,6 +14,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 app = FastAPI(title="NexusCoach API")
 app.include_router(auth_router)
 app.include_router(metrics_router)
+app.include_router(withings_router)
 
 
 @app.get("/health")

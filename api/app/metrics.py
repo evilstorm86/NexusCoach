@@ -26,13 +26,10 @@ class MetricOut(MetricIn):
     id: int
 
 
-@router.post("", status_code=201)
-def ingest(
-    points: list[MetricIn],
-    db: Session = Depends(get_db),
-    user: User = Depends(current_user),
-):
+def upsert(db: Session, user_id: int, points: list[MetricIn]) -> dict:
     """Idempotent write: re-sending the same point updates it instead of duplicating.
+
+    Every ingest path — manual, provider sync, CSV import — goes through here.
 
     ponytail: read-then-write per point rather than a dialect-specific ON CONFLICT.
     Ceiling is a query per point — batch it if a provider ever backfills 100k rows.
@@ -41,7 +38,7 @@ def ingest(
     for p in points:
         existing = db.scalar(
             select(Metric).where(
-                Metric.user_id == user.id,
+                Metric.user_id == user_id,
                 Metric.source == p.source,
                 Metric.metric == p.metric,
                 Metric.ts == p.ts,
@@ -50,10 +47,19 @@ def ingest(
         if existing:
             existing.value, existing.unit = p.value, p.unit
         else:
-            db.add(Metric(user_id=user.id, **p.model_dump()))
+            db.add(Metric(user_id=user_id, **p.model_dump()))
             written += 1
     db.commit()
     return {"received": len(points), "created": written, "updated": len(points) - written}
+
+
+@router.post("", status_code=201)
+def ingest(
+    points: list[MetricIn],
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    return upsert(db, user.id, points)
 
 
 @router.get("", response_model=list[MetricOut])

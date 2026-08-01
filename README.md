@@ -54,6 +54,22 @@ origin). `UNIQUE(user_id, source, metric, ts)` makes re-syncing a provider idemp
 | `POST /metrics` | list of points; re-sending a point updates it |
 | `GET /metrics` | `?metric=&since=&until=&limit=`, always scoped to the caller |
 
+## Withings
+
+Create an app at [developer.withings.com](https://developer.withings.com/dashboard/), set
+its callback to `WITHINGS_REDIRECT_URI`, and fill the three `WITHINGS_*` vars in `.env`.
+
+| Endpoint | Notes |
+|---|---|
+| `GET /integrations/withings/connect` | returns the URL to send the user to |
+| `GET /integrations/withings/callback` | Withings redirects here; exchanges code for tokens |
+| `POST /integrations/withings/sync` | pulls measures since the last sync |
+| `DELETE /integrations/withings` | drops the connection |
+
+`state` is a 10-minute JWT, so there is no server-side state store. Access tokens are
+refreshed automatically when within a minute of expiry. Body-composition measures land in
+`metrics` with `source="withings"`; re-syncing never duplicates them.
+
 ### Migrations
 
 ```bash
@@ -74,7 +90,7 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 1. ✅ Repository & Docker
 2. ✅ Authentication (JWT, roles user/coach/admin)
 3. ✅ Database & domain model (alembic)
-4. Withings OAuth2 sync
+4. ✅ Withings OAuth2 sync *(untested against the live API — needs credentials)*
 5. Imports (Apple Health, Health Connect, CSV)
 6. Analytics
 7. PWA

@@ -7,6 +7,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     UniqueConstraint,
     func,
@@ -51,6 +52,29 @@ class Metric(Base):
     value: Mapped[float] = mapped_column(Float)
     unit: Mapped[str] = mapped_column(String(16))
     source: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ProviderConnection(Base):
+    """OAuth tokens for one user at one provider (withings, garmin, ...).
+
+    ponytail: tokens are stored as-is. The DB is single-tenant on the app's own VM and
+    never exposed, so column encryption buys little until the DB moves or is shared —
+    at that point wrap access_token/refresh_token in Fernet keyed from the env.
+    """
+
+    __tablename__ = "provider_connections"
+    __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_connection"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(32))
+    provider_user_id: Mapped[str] = mapped_column(String(64))
+    access_token: Mapped[str] = mapped_column(String(512))
+    refresh_token: Mapped[str] = mapped_column(String(512))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Provider-side high-water mark, so a sync only asks for what changed. 0 = never synced.
+    last_update: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
