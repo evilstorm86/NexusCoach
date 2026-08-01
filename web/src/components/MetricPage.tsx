@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Series, type Summary } from "@/lib/api";
 import { favourable, format, perWeek, spec } from "@/lib/metrics";
 import TrendChart from "./TrendChart";
@@ -26,6 +26,16 @@ export default function MetricPage({ title, metrics }: { title: string; metrics:
   const [attempt, setAttempt] = useState(0);
   const [summary, setSummary] = useState<Load<Summary>>({ key: "" });
   const [chart, setChart] = useState<Load<Series>>({ key: "" });
+  const [scrollable, setScrollable] = useState(false);
+  const chips = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = chips.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setScrollable(el.scrollWidth > el.clientWidth + 1));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const summaryKey = String(days);
   const chartKey = `${selected}|${days}|${attempt}`;
@@ -72,7 +82,20 @@ export default function MetricPage({ title, metrics }: { title: string; metrics:
 
       {error && <Notice kind="error">{error}</Notice>}
 
-      {tiles.length > 0 && (
+      {/* Reserve the grid while loading — it used to be absent, then pop in and shove
+          the chart down. */}
+      {!summaryReady && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
+          {metrics.slice(0, 4).map((m) => (
+            <div
+              key={m}
+              className="h-[104px] animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--card)]"
+            />
+          ))}
+        </div>
+      )}
+
+      {summaryReady && tiles.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {tiles.map((m) => {
             const t = facts!.analysis[m]?.trend;
@@ -92,7 +115,15 @@ export default function MetricPage({ title, metrics }: { title: string; metrics:
         </div>
       )}
 
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+      <div
+        ref={chips}
+        className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
+        // Fade the trailing edge only when there is more to scroll to; applied
+        // unconditionally it would dim the last chip on desktop, where they all fit.
+        style={
+          scrollable ? { maskImage: "linear-gradient(to right, #000 88%, transparent)" } : undefined
+        }
+      >
         {metrics.map((m) => (
           <button
             key={m}

@@ -28,7 +28,8 @@ Health check: `docker compose exec api python -c "import urllib.request;print(ur
 ## PWA
 
 Pages: Dashboard, Body, Nutrition, Training, Recovery, AI Coach, Integrations, Profile.
-Installable (manifest + service worker), bottom nav on phones.
+Installable (manifest + PNG icons + service worker), bottom nav on phones. The chart
+takes keyboard focus — arrow keys walk the readings, Home/End jump to the ends.
 
 Body / Nutrition / Training / Recovery are one component with different metric lists —
 same job, so one page. Charts are inline SVG: daily readings as muted dots, the smoothed

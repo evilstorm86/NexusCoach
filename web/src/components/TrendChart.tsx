@@ -87,9 +87,27 @@ export default function TrendChart({ metric, raw, smoothed, trend }: Props) {
           width={W}
           height={H}
           viewBox={`0 0 ${W} ${H}`}
-          className="block max-w-full touch-none"
+          className="block max-w-full rounded-lg touch-none focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
           role="img"
-          aria-label={`${label} over time`}
+          aria-label={`${label} over time, ${raw.length} readings. Use arrow keys to read values.`}
+          // Keyboard equivalent of the hover readout — the value lands in the caption,
+          // which is a live region.
+          tabIndex={0}
+          onKeyDown={(e) => {
+            const last = raw.length - 1;
+            const at = hover ?? last;
+            const to =
+              e.key === "ArrowRight" ? Math.min(at + 1, last)
+              : e.key === "ArrowLeft" ? Math.max(at - 1, 0)
+              : e.key === "Home" ? 0
+              : e.key === "End" ? last
+              : e.key === "Escape" ? null
+              : undefined;
+            if (to === undefined) return;
+            e.preventDefault();
+            setHover(to);
+          }}
+          onBlur={() => setHover(null)}
           onPointerLeave={() => setHover(null)}
           onPointerMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -172,11 +190,9 @@ export default function TrendChart({ metric, raw, smoothed, trend }: Props) {
           <span className="inline-block h-2 w-2 rounded-full bg-[var(--text-muted)]" aria-hidden />
           Daily reading
         </span>
-        {active && (
-          <span className="text-[var(--text-primary)]">
-            {day(active.ts)}: {format(metric, active.value)}
-          </span>
-        )}
+        <span aria-live="polite" className="text-[var(--text-primary)]">
+          {active && `${day(active.ts)}: ${format(metric, active.value)}`}
+        </span>
         {trend && (
           <span>
             {perWeek(metric, trend.per_week)}/week over {Math.round(trend.days)} days (r²{" "}
