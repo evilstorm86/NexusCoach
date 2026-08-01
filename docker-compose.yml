@@ -17,15 +17,21 @@ services:
   api:
     build: ./api
     env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 
   web:
-    build: ./web
-    environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8000}
+    build:
+      context: ./web
+      args:
+        # Baked into the bundle at build time — this is the URL the *browser* calls.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "127.0.0.1:3000:3000"
     depends_on:
       - api
     restart: unless-stopped

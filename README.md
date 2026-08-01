@@ -25,6 +25,21 @@ docker compose up --build
 API on `:8000`, web on `:3000` (internal — exposed only via the tunnel).
 Health check: `docker compose exec api curl -s localhost:8000/health`.
 
+## PWA
+
+Pages: Dashboard, Body, Nutrition, Training, Recovery, AI Coach, Integrations, Profile.
+Installable (manifest + service worker), bottom nav on phones, light/dark from the OS.
+
+Body / Nutrition / Training / Recovery are one component with different metric lists —
+same job, so one page. Charts are inline SVG: daily readings as muted dots, the smoothed
+trend as the colored line, with hover crosshair, legend and a table view. No chart
+library. The palette comes from the data-viz reference instance and its separation was
+checked with the validator (CVD ΔE 15.9, normal-vision 17.8).
+
+`NEXT_PUBLIC_API_URL` is **baked in at build time** — it is a Docker build arg, not a
+runtime env var, and it must be the URL the *browser* uses. `CORS_ORIGINS` on the API must
+list the web origin.
+
 ## Auth
 
 | Endpoint | Notes |
@@ -132,7 +147,7 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 4. ✅ Withings OAuth2 sync *(untested against the live API — needs credentials)*
 5. ✅ Imports (Apple Health, Health Connect, CSV)
 6. ✅ Analytics
-7. PWA
+7. ✅ PWA
 8. AI Coach
 9. Scheduler (nightly 03:00)
 10. Production hardening
