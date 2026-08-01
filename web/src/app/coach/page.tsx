@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Button, Card, Chip, Notice, inputClass } from "@/components/ui";
@@ -8,6 +9,7 @@ type Turn = { role: "user" | "assistant"; content: string };
 
 export default function CoachPage() {
   const [insight, setInsight] = useState<string | null>(null);
+  const [insightError, setInsightError] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -18,7 +20,7 @@ export default function CoachPage() {
     api
       .post<{ insight: string }>("/coach/insight")
       .then((r) => setInsight(r.insight))
-      .catch((e) => setError(e.message));
+      .catch((e) => setInsightError(e.message));
   }, []);
 
   useEffect(() => {
@@ -43,6 +45,10 @@ export default function CoachPage() {
       });
       setTurns((t) => [...t, { role: "assistant", content: answer }]);
     } catch (err) {
+      // Take the unanswered turn back out and return the text to the box, so a failed
+      // question can be retried instead of sitting there looking delivered.
+      setTurns((t) => t.slice(0, -1));
+      setQuestion(asked);
       setError((err as Error).message);
     } finally {
       setBusy(false);
@@ -64,14 +70,22 @@ export default function CoachPage() {
       <Card title="Today" action={<Chip tone="accent">briefing</Chip>}>
         {insight ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{insight}</p>
-        ) : (
-          <p className="text-sm text-[var(--text-muted)]">
-            {error ? "No briefing yet." : "Preparing your briefing…"}
+        ) : insightError ? (
+          // The reason belongs here, not 300px below in red — and Profile is a link.
+          <p className="text-sm text-[var(--text-secondary)]">
+            {insightError}{" "}
+            {insightError.includes("Settings") && (
+              <Link href="/profile" className="text-[var(--accent)] underline">
+                Open settings
+              </Link>
+            )}
           </p>
+        ) : (
+          <p className="text-sm text-[var(--text-muted)]">Preparing your briefing…</p>
         )}
       </Card>
 
-      <div className="space-y-3">
+      <div className="space-y-3" aria-live="polite">
         {turns.map((turn, i) => (
           <div
             key={i}
@@ -95,6 +109,7 @@ export default function CoachPage() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask about your data…"
+          aria-label="Ask the coach about your data"
           className={`${inputClass} flex-1`}
         />
         <Button type="submit" disabled={busy || !question.trim()}>

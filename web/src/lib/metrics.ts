@@ -5,8 +5,8 @@ export const METRICS: Record<string, MetricSpec> = {
   weight: { label: "Weight", unit: "kg", decimals: 1 },
   fat_ratio: { label: "Body fat", unit: "%", decimals: 1, lowerIsBetter: true },
   fat_mass: { label: "Fat mass", unit: "kg", decimals: 1, lowerIsBetter: true },
-  fat_free_mass: { label: "Fat-free mass", unit: "kg", decimals: 1 },
-  muscle_mass: { label: "Muscle mass", unit: "kg", decimals: 1 },
+  fat_free_mass: { label: "Fat-free mass", unit: "kg", decimals: 1, lowerIsBetter: false },
+  muscle_mass: { label: "Muscle mass", unit: "kg", decimals: 1, lowerIsBetter: false },
   bone_mass: { label: "Bone mass", unit: "kg", decimals: 1 },
   hydration: { label: "Hydration", unit: "kg", decimals: 1 },
   bmi: { label: "BMI", unit: "", decimals: 1 },
@@ -21,12 +21,12 @@ export const METRICS: Record<string, MetricSpec> = {
   basal_kcal: { label: "Basal energy", unit: "kcal", decimals: 0 },
   exercise_min: { label: "Exercise", unit: "min", decimals: 0 },
   distance_km: { label: "Distance", unit: "km", decimals: 1 },
-  vo2max: { label: "VO₂ max", unit: "ml/kg/min", decimals: 1 },
+  vo2max: { label: "VO₂ max", unit: "ml/kg/min", decimals: 1, lowerIsBetter: false },
 
   resting_hr: { label: "Resting HR", unit: "bpm", decimals: 0, lowerIsBetter: true },
   heart_rate: { label: "Heart rate", unit: "bpm", decimals: 0 },
-  hrv: { label: "HRV (SDNN)", unit: "ms", decimals: 0 },
-  spo2: { label: "SpO₂", unit: "%", decimals: 0 },
+  hrv: { label: "HRV (SDNN)", unit: "ms", decimals: 0, lowerIsBetter: false },
+  spo2: { label: "SpO₂", unit: "%", decimals: 0, lowerIsBetter: false },
   body_temp: { label: "Body temperature", unit: "°C", decimals: 1 },
   systolic_bp: { label: "Systolic BP", unit: "mmHg", decimals: 0 },
   diastolic_bp: { label: "Diastolic BP", unit: "mmHg", decimals: 0 },
@@ -42,6 +42,16 @@ export const format = (metric: string, value: number) => {
     maximumFractionDigits: decimals,
   });
   return unit ? `${n} ${unit}` : n;
+};
+
+/**
+ * Is this rate of change the direction the user wants?
+ * null when the metric has no better direction — steps and heart rate aren't goals.
+ */
+export const favourable = (metric: string, perWeekValue: number): boolean | null => {
+  const { lowerIsBetter } = spec(metric);
+  if (lowerIsBetter === undefined || perWeekValue === 0) return null;
+  return lowerIsBetter ? perWeekValue < 0 : perWeekValue > 0;
 };
 
 /** Rate of change, signed and rounded for display. The API sends 3 decimals. */

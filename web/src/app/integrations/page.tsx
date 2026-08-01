@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Button, Card, Chip, Notice } from "@/components/ui";
 
@@ -28,16 +29,20 @@ function Upload({ label, path, accept }: { label: string; path: string; accept: 
     }
   }
 
+  const id = `upload-${path.replace(/\W+/g, "-")}`;
   return (
     <div className="space-y-2">
-      <p className="text-sm">{label}</p>
+      <label htmlFor={id} className="block text-sm">
+        {label}
+      </label>
       <input
+        id={id}
         ref={input}
         type="file"
         accept={accept}
         disabled={busy}
         onChange={(e) => e.target.files?.[0] && send(e.target.files[0])}
-        className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[var(--border)] file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-[var(--text-primary)]"
+        className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-full file:border file:border-[var(--border)] file:bg-transparent file:px-4 file:py-2.5 file:text-sm file:text-[var(--text-primary)]"
       />
       {busy && <p className="text-sm text-[var(--text-muted)]">Importing…</p>}
       {status && <Notice kind={status.kind}>{status.text}</Notice>}
@@ -45,9 +50,19 @@ function Upload({ label, path, accept }: { label: string; path: string; accept: 
   );
 }
 
+type Withings = { connected: boolean; configured: boolean; last_sync: string | null };
+
 export default function IntegrationsPage() {
   const [status, setStatus] = useState<{ kind: "error" | "ok"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [withings, setWithings] = useState<Withings | null>(null);
+
+  const loadStatus = () =>
+    api.get<Withings>("/integrations/withings").then(setWithings).catch(() => {});
+
+  useEffect(() => {
+    loadStatus();
+  }, []);
 
   async function run(action: () => Promise<string>) {
     setBusy(true);
@@ -58,6 +73,7 @@ export default function IntegrationsPage() {
       setStatus({ kind: "error", text: (e as Error).message });
     } finally {
       setBusy(false);
+      loadStatus();
     }
   }
 
@@ -65,10 +81,36 @@ export default function IntegrationsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Sources</h1>
 
-      <Card title="Withings" action={<Chip tone="accent">OAuth</Chip>}>
+      <Card
+        title="Withings"
+        action={
+          withings ? (
+            <Chip tone={withings.connected ? "accent" : "muted"}>
+              {withings.connected ? "Connected" : "Not connected"}
+            </Chip>
+          ) : null
+        }
+      >
+        {withings && !withings.configured && (
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
+            No Withings credentials yet — add them under{" "}
+            <Link href="/profile" className="text-[var(--accent)] underline">
+              Profile → Settings
+            </Link>
+            .
+          </p>
+        )}
+        {withings?.connected && (
+          <p className="mb-3 text-sm text-[var(--text-muted)]">
+            {withings.last_sync
+              ? `Last synced ${new Date(withings.last_sync).toLocaleString()}`
+              : "Never synced yet."}
+          </p>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <Button
-            disabled={busy}
+            disabled={busy || withings?.connected}
             onClick={() =>
               run(async () => {
                 const { authorize_url } = await api.get<{ authorize_url: string }>(
@@ -83,7 +125,7 @@ export default function IntegrationsPage() {
           </Button>
           <Button
             variant="quiet"
-            disabled={busy}
+            disabled={busy || !withings?.connected}
             onClick={() =>
               run(async () => {
                 const r = await api.post<IngestResult>("/integrations/withings/sync");
@@ -95,7 +137,7 @@ export default function IntegrationsPage() {
           </Button>
           <Button
             variant="danger"
-            disabled={busy}
+            disabled={busy || !withings?.connected}
             onClick={() =>
               run(async () => {
                 await api.del("/integrations/withings");

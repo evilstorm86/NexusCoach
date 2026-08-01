@@ -17,12 +17,14 @@ const ICONS: Record<string, string> = {
   "/profile": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0",
 };
 
+// Labels match the page headings — abbreviated verbs read as a different app than the
+// page you land on. Only the dashboard differs, and it has no heading of its own.
 const NAV: [string, string][] = [
   ["/", "Home"],
   ["/body", "Body"],
-  ["/nutrition", "Food"],
-  ["/training", "Train"],
-  ["/recovery", "Recover"],
+  ["/nutrition", "Nutrition"],
+  ["/training", "Training"],
+  ["/recovery", "Recovery"],
   ["/coach", "Coach"],
   ["/integrations", "Sources"],
   ["/profile", "Profile"],
@@ -93,7 +95,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 href={href}
                 aria-label={label}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full py-2.5 text-xs transition-colors ${
+                className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full py-3.5 text-xs transition-colors ${
                   active
                     ? "shrink-0 bg-[var(--accent)] px-3.5 font-semibold text-[var(--accent-ink)]"
                     : "flex-1 text-[var(--text-secondary)]"

@@ -200,6 +200,25 @@ def callback(code: str, state: str, db: Session = Depends(get_db)):
     return {"connected": True, "provider": PROVIDER}
 
 
+@router.get("")
+def status(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Whether this user is connected, so the UI can stop offering Sync to nobody."""
+    conn = db.scalar(
+        select(ProviderConnection).where(
+            ProviderConnection.user_id == user.id, ProviderConnection.provider == PROVIDER
+        )
+    )
+    return {
+        "connected": conn is not None,
+        "configured": bool(user_settings.get(db, user.id, "withings_client_id")),
+        "last_sync": (
+            datetime.fromtimestamp(conn.last_update, tz=timezone.utc).isoformat()
+            if conn and conn.last_update
+            else None
+        ),
+    }
+
+
 @router.post("/sync")
 def sync(db: Session = Depends(get_db), user: User = Depends(current_user)):
     conn = db.scalar(

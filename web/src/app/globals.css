@@ -26,8 +26,10 @@
   --grid: #212126;
   --axis: #2e2e34;
 
+  /* Both clear 4.5:1 as text on --surface and on --card. The darker #d03b3b managed
+     only 4.09 / 3.72, and error text is the last thing that should be hard to read. */
   --good: #0ca30c;
-  --critical: #d03b3b;
+  --critical: #f06a6a;
 }
 
 @theme inline {

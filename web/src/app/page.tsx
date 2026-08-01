@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, type Me, type Series, type Summary } from "@/lib/api";
-import { format, perWeek, spec } from "@/lib/metrics";
+import { favourable, format, perWeek, spec } from "@/lib/metrics";
 import TrendChart from "@/components/TrendChart";
 import { Card, Chip, Notice, StatTile } from "@/components/ui";
 
@@ -22,13 +22,16 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Me>("/auth/me").then(setMe).catch(() => {});
-    api.get<Summary>("/analytics/summary").then(setSummary).catch((e) => setError(e.message));
-    api.get<Series>("/analytics/series?metric=weight&days=90").then(setWeight).catch(() => {});
+    // Every one of these reports its failure. Swallowing them made a broken API look
+    // identical to an account with no data.
+    const fail = (e: Error) => setError(e.message);
+    api.get<Me>("/auth/me").then(setMe).catch(fail);
+    api.get<Summary>("/analytics/summary").then(setSummary).catch(fail);
+    api.get<Series>("/analytics/series?metric=weight&days=90").then(setWeight).catch(fail);
     api
       .get<{ prediction: Forecast }>("/analytics/predict?metric=weight&days_ahead=30")
       .then((p) => setForecast(p.prediction))
-      .catch(() => {});
+      .catch(fail);
   }, []);
 
   const facts = summary?.facts ?? {};
@@ -92,15 +95,25 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {keys
             .filter((m) => m !== "weight")
-            .map((m) => (
-              <StatTile
-                key={m}
-                label={spec(m).label}
-                value={format(m, facts[m].latest)}
-                trend={summary?.analysis[m]?.trend?.per_week}
-                detail={new Date(facts[m].at).toLocaleDateString()}
-              />
-            ))}
+            .map((m) => {
+              const t = summary?.analysis[m]?.trend;
+              return (
+                <StatTile
+                  key={m}
+                  label={spec(m).label}
+                  value={format(m, facts[m].latest)}
+                  trend={t?.per_week}
+                  favourable={t ? favourable(m, t.per_week) : null}
+                  // The arrow describes the rate, so the rate is what sits beside it —
+                  // it used to point at the measurement date.
+                  detail={
+                    t
+                      ? `${perWeek(m, t.per_week)}/wk`
+                      : new Date(facts[m].at).toLocaleDateString()
+                  }
+                />
+              );
+            })}
         </div>
       )}
 
@@ -115,7 +128,9 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {forecast && (
+      {/* Hidden on an empty account: a card explaining there is nothing to project,
+          directly under a card saying there is no data, is noise. */}
+      {forecast && keys.length > 0 && (
         <Card title="Projection" action={<Chip>prediction</Chip>}>
           {forecast.available && forecast.value_in_days ? (
             <div className="space-y-1.5 text-sm">

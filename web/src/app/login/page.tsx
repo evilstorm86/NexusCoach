@@ -51,6 +51,7 @@ export default function LoginPage() {
         required
         autoComplete="email"
         placeholder="Email"
+        aria-label="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className={inputClass}
@@ -61,6 +62,7 @@ export default function LoginPage() {
         minLength={mode === "register" ? 10 : undefined}
         autoComplete={mode === "login" ? "current-password" : "new-password"}
         placeholder={mode === "register" ? "Password (10+ characters)" : "Password"}
+        aria-label="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className={inputClass}

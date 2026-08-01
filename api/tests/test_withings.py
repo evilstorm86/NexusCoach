@@ -118,6 +118,21 @@ def test_sync_without_connection_is_404(client, user_token, calls):
     assert client.post("/integrations/withings/sync", headers=user_token).status_code == 404
 
 
+def test_status_reports_whether_this_user_is_connected(client, user_token, calls):
+    before = client.get("/integrations/withings", headers=user_token).json()
+    assert before == {"connected": False, "configured": True, "last_sync": None}
+
+    connect(client, user_token, calls)
+    after = client.get("/integrations/withings", headers=user_token).json()
+    assert after["connected"] is True and after["last_sync"] is None  # not synced yet
+
+    client.post("/integrations/withings/sync", headers=user_token)
+    synced = client.get("/integrations/withings", headers=user_token).json()
+    assert synced["last_sync"].startswith("2026-")  # from MEASURES["updatetime"]
+
+    assert client.get("/integrations/withings").status_code == 401
+
+
 def test_disconnect_removes_only_the_callers_connection(client, user_token, calls):
     connect(client, user_token, calls)
     with SessionLocal() as db:

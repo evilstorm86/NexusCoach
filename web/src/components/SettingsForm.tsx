@@ -75,7 +75,9 @@ export default function SettingsForm() {
                 autoComplete="off"
                 value={drafts[row.name] ?? ""}
                 onChange={(e) => setDrafts({ ...drafts, [row.name]: e.target.value })}
-                placeholder={row.configured ? row.value : "Not set"}
+                // No placeholder: showing the current value in grey inside an empty
+                // field made it look filled. The value is stated below instead.
+                placeholder=""
                 className={`${inputClass} min-w-0 flex-1`}
               />
               <Button
@@ -104,8 +106,9 @@ export default function SettingsForm() {
             </div>
 
             <p className="text-xs text-[var(--text-muted)]">
-              {row.configured ? `Using ${SOURCE_LABEL[row.source]}` : "Not configured"}
-              {row.secret && row.configured && row.source === "user" && ` (${row.value})`}
+              {row.configured
+                ? `Using ${SOURCE_LABEL[row.source]}: ${row.value}`
+                : "Not configured"}
             </p>
           </div>
         ))}
