@@ -1,24 +1,18 @@
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 
 from . import db
 from .auth import require_role, router as auth_router
+from .metrics import router as metrics_router
 from .models import User
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # ponytail: create_all until milestone 3 brings alembic. Fine while there are no migrations to run.
-    db.Base.metadata.create_all(db.engine)
-    yield
-
-
-app = FastAPI(title="NexusCoach API", lifespan=lifespan)
+# Schema is created by `alembic upgrade head` (run by the api container on start).
+app = FastAPI(title="NexusCoach API")
 app.include_router(auth_router)
+app.include_router(metrics_router)
 
 
 @app.get("/health")

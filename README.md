@@ -37,6 +37,30 @@ Passwords are bcrypt-hashed. Roles: `user`, `coach`, `admin` — `admin` passes 
 guard. Protect a route with `Depends(require_role("coach"))`. Register/login/failed-login
 are written to the `nexuscoach.audit` logger.
 
+## Data model
+
+| Table | Purpose |
+|---|---|
+| `users` | account + role |
+| `metrics` | every normalized measurement: `user_id, ts, metric, value, unit, source` |
+| `daily_snapshots` | per-user daily rollup, `(user_id, day)` → JSON |
+
+`metrics` is deliberately one narrow table rather than one per domain — Withings, Apple
+Health, Health Connect and CSV all emit the same shape (type + value + unit + time +
+origin). `UNIQUE(user_id, source, metric, ts)` makes re-syncing a provider idempotent.
+
+| Endpoint | Notes |
+|---|---|
+| `POST /metrics` | list of points; re-sending a point updates it |
+| `GET /metrics` | `?metric=&since=&until=&limit=`, always scoped to the caller |
+
+### Migrations
+
+```bash
+docker compose exec api alembic revision --autogenerate -m "what changed"
+docker compose exec api alembic upgrade head    # also runs on container start
+```
+
 ## Tests
 
 ```bash
@@ -49,7 +73,7 @@ Tests run against a throwaway SQLite file, so no database container is needed.
 
 1. ✅ Repository & Docker
 2. ✅ Authentication (JWT, roles user/coach/admin)
-3. Database & domain model
+3. ✅ Database & domain model (alembic)
 4. Withings OAuth2 sync
 5. Imports (Apple Health, Health Connect, CSV)
 6. Analytics
