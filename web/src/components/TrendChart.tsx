@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Point, Trend } from "@/lib/api";
-import { format, spec } from "@/lib/metrics";
+import { format, perWeek, spec } from "@/lib/metrics";
 
 const W = 800;
 const H = 240;
@@ -19,7 +19,7 @@ const day = (iso: string) =>
  */
 export default function TrendChart({ metric, raw, smoothed, trend }: Props) {
   const [hover, setHover] = useState<number | null>(null);
-  const { label, unit } = spec(metric);
+  const { label } = spec(metric);
 
   if (raw.length === 0) {
     return (
@@ -105,7 +105,7 @@ export default function TrendChart({ metric, raw, smoothed, trend }: Props) {
           points={line}
           fill="none"
           stroke="var(--series-1)"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinejoin="round"
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
@@ -140,9 +140,7 @@ export default function TrendChart({ metric, raw, smoothed, trend }: Props) {
         )}
         {trend && (
           <span>
-            {trend.per_week > 0 ? "+" : ""}
-            {trend.per_week} {unit || "units"}/week over {trend.days} days (r²{" "}
-            {trend.r_squared})
+            {perWeek(metric, trend.per_week)}/week over {trend.days} days (r² {trend.r_squared})
           </span>
         )}
       </figcaption>

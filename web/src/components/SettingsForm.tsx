@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Button, Card, Notice } from "@/components/ui";
+import { Button, Card, Chip, Notice, inputClass } from "@/components/ui";
 
 type Setting = {
   name: string;
@@ -60,9 +60,12 @@ export default function SettingsForm() {
       <div className="space-y-5">
         {rows.map((row) => (
           <div key={row.name} className="space-y-1.5">
-            <label htmlFor={row.name} className="block text-sm">
-              {row.label}
-            </label>
+            <div className="flex items-center gap-2">
+              <label htmlFor={row.name} className="block text-sm">
+                {row.label}
+              </label>
+              {row.secret && <Chip>secret</Chip>}
+            </div>
             <p className="text-xs text-[var(--text-muted)]">{row.help}</p>
 
             <div className="flex flex-wrap gap-2">
@@ -73,7 +76,7 @@ export default function SettingsForm() {
                 value={drafts[row.name] ?? ""}
                 onChange={(e) => setDrafts({ ...drafts, [row.name]: e.target.value })}
                 placeholder={row.configured ? row.value : "Not set"}
-                className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm"
+                className={`${inputClass} min-w-0 flex-1`}
               />
               <Button
                 disabled={busy === row.name || !(drafts[row.name] ?? "").trim()}

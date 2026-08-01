@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { api, type Series, type Summary } from "@/lib/api";
-import { format, spec } from "@/lib/metrics";
+import { format, perWeek, spec } from "@/lib/metrics";
 import TrendChart from "./TrendChart";
-import { Card, Notice, StatTile } from "./ui";
+import { Card, Chip, Notice, Segmented, StatTile } from "./ui";
 
-const RANGES = [30, 90, 365];
+const RANGES = [
+  { value: 30, label: "30d" },
+  { value: 90, label: "90d" },
+  { value: 365, label: "1y" },
+];
 
 /** Shared by Body / Nutrition / Training / Recovery — same job, different metric list. */
 export default function MetricPage({ title, metrics }: { title: string; metrics: string[] }) {
@@ -30,25 +34,29 @@ export default function MetricPage({ title, metrics }: { title: string; metrics:
   const tiles = metrics.filter((m) => summary?.facts[m]);
   // Keep the old chart on a range change, but never show one metric's data under another's name.
   const shown = series?.metric === selected ? series : null;
+  const trend = shown?.analysis.trend;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">{title}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <Segmented options={RANGES} value={days} onChange={setDays} label="Time range" />
+      </div>
+
       {error && <Notice kind="error">{error}</Notice>}
 
       {tiles.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {tiles.map((m) => {
-            const trend = summary!.analysis[m]?.trend;
+            const t = summary!.analysis[m]?.trend;
             return (
               <StatTile
                 key={m}
                 label={spec(m).label}
                 value={format(m, summary!.facts[m].latest)}
+                trend={t?.per_week}
                 detail={
-                  trend
-                    ? `${trend.per_week > 0 ? "+" : ""}${trend.per_week} ${spec(m).unit || ""}/wk`
-                    : `${summary!.facts[m].days_of_data} day(s) of data`
+                  t ? `${perWeek(m, t.per_week)}/wk` : `${summary!.facts[m].days_of_data} day(s) of data`
                 }
               />
             );
@@ -56,38 +64,29 @@ export default function MetricPage({ title, metrics }: { title: string; metrics:
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-sm"
-          aria-label="Metric"
-        >
-          {metrics.map((m) => (
-            <option key={m} value={m}>
-              {spec(m).label}
-            </option>
-          ))}
-        </select>
-        <div className="flex gap-1">
-          {RANGES.map((d) => (
-            <button
-              key={d}
-              onClick={() => setDays(d)}
-              aria-pressed={days === d}
-              className={`rounded-lg px-2.5 py-1.5 text-sm ${
-                days === d
-                  ? "bg-[var(--series-1)] text-white"
-                  : "border border-[var(--border)] text-[var(--text-secondary)]"
-              }`}
-            >
-              {d}d
-            </button>
-          ))}
-        </div>
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+        {metrics.map((m) => (
+          <button
+            key={m}
+            onClick={() => setSelected(m)}
+            aria-pressed={selected === m}
+            className={`rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors ${
+              selected === m
+                ? "bg-[var(--accent)] font-semibold text-[var(--accent-ink)]"
+                : "bg-[var(--card)] text-[var(--text-secondary)]"
+            }`}
+          >
+            {spec(m).label}
+          </button>
+        ))}
       </div>
 
-      <Card title={spec(selected).label}>
+      <Card
+        title={spec(selected).label}
+        action={
+          trend ? <Chip tone="accent">{perWeek(selected, trend.per_week)}/week</Chip> : null
+        }
+      >
         {shown ? (
           <TrendChart
             metric={selected}

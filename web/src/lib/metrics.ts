@@ -44,6 +44,13 @@ export const format = (metric: string, value: number) => {
   return unit ? `${n} ${unit}` : n;
 };
 
+/** Rate of change, signed and rounded for display. The API sends 3 decimals. */
+export const perWeek = (metric: string, value: number) => {
+  const { unit } = spec(metric);
+  const n = Math.abs(value) >= 10 ? Math.round(value) : Number(value.toFixed(2));
+  return `${n > 0 ? "+" : ""}${n} ${unit || ""}`.trim();
+};
+
 export const PAGES = {
   body: ["weight", "fat_ratio", "muscle_mass", "fat_mass", "fat_free_mass", "hydration", "bone_mass", "bmi"],
   nutrition: ["kcal_in", "protein_g", "carbs_g", "fat_g"],

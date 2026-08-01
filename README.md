@@ -33,8 +33,24 @@ Installable (manifest + service worker), bottom nav on phones, light/dark from t
 Body / Nutrition / Training / Recovery are one component with different metric lists —
 same job, so one page. Charts are inline SVG: daily readings as muted dots, the smoothed
 trend as the colored line, with hover crosshair, legend and a table view. No chart
-library. The palette comes from the data-viz reference instance and its separation was
-checked with the validator (CVD ΔE 15.9, normal-vision 17.8).
+library.
+
+### Look
+
+Dark-only, orange accent, fully rounded cards and pill controls. Dark-only is deliberate:
+the design commits to it, and a light theme nobody asked for is a second palette to keep
+validated.
+
+**The UI accent and the chart mark are different oranges on purpose.** `--accent`
+(`#ff7a1a`) is the bright one for buttons, active nav and the FAB; `--series-1`
+(`#e26410`) is a darker step for data. The bright orange sits above the dark-mode
+lightness band and fails as a data color even though it reads well as UI — the chart
+value was checked with the data-viz validator on this surface (CVD ΔE 12.8,
+normal-vision 17.4, contrast ≥ 3:1). Buttons use near-black ink on accent; white on
+orange doesn't clear 4.5:1.
+
+On phones the bottom bar shows eight icons with the label on the active item only — eight
+labelled items don't fit at 390 px.
 
 `NEXT_PUBLIC_API_URL` is **baked in at build time** — it is a Docker build arg, not a
 runtime env var, and it must be the URL the *browser* uses. `CORS_ORIGINS` on the API must

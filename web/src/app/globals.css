@@ -1,42 +1,44 @@
 @import "tailwindcss";
 
-/* Palette roles from the data-viz reference instance. Charts and chrome both read
-   these, so light/dark swaps happen in one place. */
+/* ponytail: dark only. The reference design is committed to it, and a light theme
+   nobody asked for is a second palette to keep validated. */
 :root {
-  --surface: #f9f9f7;
-  --card: #fcfcfb;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
-  --series-1: #2a78d6;
+  color-scheme: dark;
+
+  --surface: #0b0b0d; /* page */
+  --card: #17171a; /* panels */
+  --raised: #202025; /* inputs, chips, pressed states */
+  --border: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #f5f4f2;
+  --text-secondary: #a8a6a1;
+  --text-muted: #85837d;
+
+  /* UI accent — buttons, active nav, the FAB. Bright, so text on it is near-black. */
+  --accent: #ff7a1a;
+  --accent-ink: #140a02;
+  --accent-wash: rgba(255, 122, 26, 0.14);
+
+  /* Chart mark. A darker step than --accent: the bright one sits above the dark-mode
+     lightness band, so it fails as a data color even though it reads well as UI.
+     Validated on this surface: CVD ΔE 12.8, normal-vision 17.4, contrast ≥ 3:1. */
+  --series-1: #e26410;
+  --grid: #212126;
+  --axis: #2e2e34;
+
   --good: #0ca30c;
   --critical: #d03b3b;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #0d0d0d;
-    --card: #1a1a19;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.1);
-    --series-1: #3987e5;
-  }
 }
 
 @theme inline {
   --color-surface: var(--surface);
   --color-card: var(--card);
+  --color-raised: var(--raised);
   --color-ink: var(--text-primary);
   --color-ink-secondary: var(--text-secondary);
   --color-ink-muted: var(--text-muted);
   --color-hairline: var(--border);
+  --color-accent: var(--accent);
   --color-series-1: var(--series-1);
 }
 
@@ -44,4 +46,25 @@ body {
   background: var(--surface);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Inputs inherit the raised surface rather than the browser's default light chrome. */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+/* The reference has no visible scrollbars on its cards. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

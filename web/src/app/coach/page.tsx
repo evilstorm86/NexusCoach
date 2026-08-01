@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { Button, Card, Notice } from "@/components/ui";
+import { Button, Card, Chip, Notice, inputClass } from "@/components/ui";
 
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -51,11 +51,19 @@ export default function CoachPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">AI Coach</h1>
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent)] text-lg text-[var(--accent-ink)]">
+          <span aria-hidden>✦</span>
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">AI Coach</h1>
+          <p className="text-xs text-[var(--text-secondary)]">Reads only your own data</p>
+        </div>
+      </div>
 
-      <Card title="Today">
+      <Card title="Today" action={<Chip tone="accent">briefing</Chip>}>
         {insight ? (
-          <p className="text-sm whitespace-pre-wrap">{insight}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{insight}</p>
         ) : (
           <p className="text-sm text-[var(--text-muted)]">
             {error ? "No briefing yet." : "Preparing your briefing…"}
@@ -67,9 +75,9 @@ export default function CoachPage() {
         {turns.map((turn, i) => (
           <div
             key={i}
-            className={`max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
+            className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
               turn.role === "user"
-                ? "ml-auto bg-[var(--series-1)] text-white"
+                ? "ml-auto bg-[var(--accent)] font-medium text-[var(--accent-ink)]"
                 : "border border-[var(--border)] bg-[var(--card)]"
             }`}
           >
@@ -82,12 +90,12 @@ export default function CoachPage() {
 
       {error && <Notice kind="error">{error}</Notice>}
 
-      <form onSubmit={send} className="flex gap-2">
+      <form onSubmit={send} className="sticky bottom-20 flex gap-2 sm:bottom-0">
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask about your data…"
-          className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm"
+          className={`${inputClass} flex-1`}
         />
         <Button type="submit" disabled={busy || !question.trim()}>
           Ask

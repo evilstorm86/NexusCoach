@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { Button, Card, Notice } from "@/components/ui";
+import { Button, Card, Chip, Notice } from "@/components/ui";
 
 type IngestResult = { received: number; created: number; updated: number };
 
@@ -63,9 +63,9 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Integrations</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Sources</h1>
 
-      <Card title="Withings">
+      <Card title="Withings" action={<Chip tone="accent">OAuth</Chip>}>
         <div className="flex flex-wrap gap-2">
           <Button
             disabled={busy}

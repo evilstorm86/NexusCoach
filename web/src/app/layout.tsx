@@ -11,12 +11,8 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "NexusCoach", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9f9f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
-  ],
-};
+// Dark only — the app commits to one theme, so the chrome does too.
+export const viewport: Viewport = { themeColor: "#0b0b0d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

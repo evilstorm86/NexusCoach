@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, clearToken, type Me } from "@/lib/api";
 import SettingsForm from "@/components/SettingsForm";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Chip } from "@/components/ui";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -16,15 +16,18 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Profile</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
 
       <Card>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-          <dt className="text-[var(--text-secondary)]">Email</dt>
-          <dd>{me?.email ?? "…"}</dd>
-          <dt className="text-[var(--text-secondary)]">Role</dt>
-          <dd>{me?.role ?? "…"}</dd>
-        </dl>
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] text-xl font-semibold text-[var(--accent-ink)]">
+            {(me?.email ?? "?").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-base font-medium">{me?.email ?? "…"}</p>
+            <div className="mt-1.5">{me && <Chip tone="accent">{me.role}</Chip>}</div>
+          </div>
+        </div>
       </Card>
 
       <SettingsForm />

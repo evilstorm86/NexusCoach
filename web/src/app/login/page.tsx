@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api, setToken } from "@/lib/api";
-import { Button, Notice } from "@/components/ui";
+import { Button, Notice, inputClass } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,11 +33,18 @@ export default function LoginPage() {
   }
 
   return (
-    <form onSubmit={submit} className="mt-16 space-y-4">
-      <h1 className="text-2xl font-semibold">NexusCoach</h1>
-      <p className="text-sm text-[var(--text-secondary)]">
-        {mode === "login" ? "Sign in to your digital twin." : "Create an account."}
-      </p>
+    <form onSubmit={submit} className="mt-20 space-y-5">
+      <div className="space-y-2">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)] text-2xl">
+          <span aria-hidden className="text-[var(--accent-ink)]">◈</span>
+        </div>
+        <h1 className="text-3xl font-semibold tracking-tight">NexusCoach</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          {mode === "login"
+            ? "Sign in to your digital twin."
+            : "Create an account and start building it."}
+        </p>
+      </div>
 
       <input
         type="email"
@@ -46,7 +53,7 @@ export default function LoginPage() {
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm"
+        className={inputClass}
       />
       <input
         type="password"
@@ -56,12 +63,12 @@ export default function LoginPage() {
         placeholder={mode === "register" ? "Password (10+ characters)" : "Password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm"
+        className={inputClass}
       />
 
       {error && <Notice kind="error">{error}</Notice>}
 
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" disabled={busy} full>
         {busy ? "…" : mode === "login" ? "Sign in" : "Create account"}
       </Button>
 
@@ -71,7 +78,7 @@ export default function LoginPage() {
           setMode(mode === "login" ? "register" : "login");
           setError(null);
         }}
-        className="block text-sm text-[var(--text-secondary)] underline"
+        className="block w-full text-center text-sm text-[var(--text-secondary)]"
       >
         {mode === "login" ? "Need an account?" : "Already have an account?"}
       </button>
